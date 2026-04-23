@@ -107,6 +107,12 @@ body{font-family:Arial,sans-serif;background:#f0f4f8;overflow:hidden;height:100v
 .color-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;align-items:flex-start}
 .color-swatch{width:28px;height:28px;border-radius:5px;cursor:pointer;border:3px solid transparent;transition:border-color .15s,transform .15s}
 .color-swatch.selected{border-color:#222;transform:scale(1.15)}</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const _SUPA_URL = 'https://advsflpqbytfstkzpbfh.supabase.co';
+const _SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkdnNmbHBxYnl0ZnN0a3pwYmZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5MjI0ODgsImV4cCI6MjA5MjQ5ODQ4OH0.lEI6yx1Z3Qbyht8IqrhxdnAJCY871ksD4dbSoyFrRws';
+const _supabase = supabase.createClient(_SUPA_URL, _SUPA_KEY);
+</script>
 </head>
 <body>
 <div class="topbar">
@@ -257,7 +263,7 @@ function navNext(){
 }
 function timeToSlot(t){ const[h,m]=t.split(':').map(Number); return(h*60+m-START_H*60)/30; }
 function slotToTime(s){ const m=START_H*60+s*30; return pad(Math.floor(m/60))+':'+pad(m%60); }
-function save(){ localStorage.setItem('nt_b9',JSON.stringify(bookings)); }
+function save(){ /* data persisted to Supabase directly */ }
 function saveProj(){ localStorage.setItem('nt_cp9',JSON.stringify(customProj)); }
 
 function render(){
@@ -652,7 +658,7 @@ function openEditModal(id){
   document.getElementById('modal').classList.add('show');
 }
 function closeModal(){ document.getElementById('modal').classList.remove('show'); }
-function saveBooking(){
+async function saveBooking(){
   const instrument=document.getElementById('f-inst').value;
   const user=document.getElementById('f-user').value;
   const project=document.getElementById('f-proj').value;
@@ -664,17 +670,29 @@ function saveBooking(){
   if(!instrument||!user||!project||!startDate||!startTime||!endDate||!endTime){ alert('请填写所有必填项'); return; }
   if(startDate>endDate||(startDate===endDate&&startTime>=endTime)){ alert('结束时间须晚于开始时间'); return; }
   if(editId){
-    const idx=bookings.findIndex(b=>b.id===editId);
-    if(idx>=0) bookings[idx]={...bookings[idx],instrument,user,project,startDate,startTime,endDate,endTime,note,color:selectedColor};
+    await _supabase.from('Bookings').update({
+      instrument,user_name:user,project,start_date:startDate,
+      start_time:startTime,end_date:endDate,end_time:endTime,
+      note,color:selectedColor
+    }).eq('booking_id',editId);
   } else {
-    bookings.push({id:Date.now().toString(),instrument,user,project,startDate,startTime,endDate,endTime,note,color:selectedColor});
+    const newId=Date.now().toString();
+    await _supabase.from('Bookings').insert({
+      booking_id:newId,instrument,user_name:user,project,
+      start_date:startDate,start_time:startTime,
+      end_date:endDate,end_time:endTime,note,color:selectedColor
+    });
   }
-  save(); closeModal(); render();
+  closeModal();
+  await loadBookings();
+  render();
 }
-function deleteBooking(){
+async function deleteBooking(){
   if(!editId||!confirm('确认删除此预约？')) return;
-  bookings=bookings.filter(b=>b.id!==editId);
-  save(); closeModal(); render();
+  await _supabase.from('Bookings').delete().eq('booking_id',editId);
+  closeModal();
+  await loadBookings();
+  render();
 }
 function toggleSec(el){
   const body=el.nextElementSibling;
@@ -689,7 +707,29 @@ function mk(tag,cls){ const el=document.createElement(tag); if(cls) el.className
 function txt(s){ return document.createTextNode(s); }
 function bindClick(el,fn){ el.addEventListener('click',fn); }
 
-setView('week');
+async function loadBookings(){
+  const {data,error}=await _supabase.from('Bookings').select('*');
+  if(error){ console.error('加载预约失败',error); return; }
+  bookings=(data||[]).map(function(r){
+    return {
+      id:r.booking_id, instrument:r.instrument, user:r.user_name,
+      project:r.project, startDate:r.start_date, startTime:r.start_time,
+      endDate:r.end_date, endTime:r.end_time, color:r.color, note:r.note||''
+    };
+  });
+}
+
+// 实时订阅：任何人增删改，所有人自动刷新
+_supabase.channel('bookings-changes')
+  .on('postgres_changes',{event:'*',schema:'public',table:'Bookings'},function(){
+    loadBookings().then(function(){ render(); });
+  })
+  .subscribe();
+
+loadBookings().then(function(){
+  setView('week');
+});
+
 setInterval(function(){
   if(currentView==='day'){
     document.getElementById('gc').querySelectorAll('.now-line').forEach(function(l){ l.remove(); });
