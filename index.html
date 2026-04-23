@@ -170,7 +170,7 @@ const _supabase = supabase.createClient(_SUPA_URL, _SUPA_KEY);
     <div class="mf"><label>分析人员</label><select id="f-user"></select></div>
     <div class="mf"><label>项目</label><select id="f-proj"></select></div>
     <div class="mf" style="display:flex;gap:8px">
-      <div style="flex:1"><label>开始日期</label><input type="date" id="f-sdate" onchange="var ed=document.getElementById('f-edate');if(!ed.value||ed.value<this.value)ed.value=this.value;"></div>
+      <div style="flex:1"><label>开始日期</label><input type="date" id="f-sdate"></div>
       <div style="flex:1"><label>开始时间</label><input type="time" id="f-stime" value="08:00"></div>
     </div>
     <div class="mf" style="display:flex;gap:8px">
@@ -638,10 +638,9 @@ function openAddModal(instId,sDate,sTime,eDate,eTime){
   editId=null; selectedColor=COLORS[2].hex; buildModalSelects();
   document.getElementById('modal-title').textContent='新增预约';
   document.getElementById('btn-del').style.display='none';
-  const td=todayKey();
-  const sd=sDate||td;
-  document.getElementById('f-sdate').value=sd;
-  document.getElementById('f-edate').value=eDate||sd;
+  const td=dateKey(currentDate);
+  document.getElementById('f-sdate').value=sDate||td;
+  document.getElementById('f-edate').value=eDate||td;
   document.getElementById('f-stime').value=sTime||'08:00';
   document.getElementById('f-etime').value=eTime||'10:00';
   if(instId) document.getElementById('f-inst').value=instId;
@@ -674,22 +673,20 @@ async function saveBooking(){
   const endTime=document.getElementById('f-etime').value;
   const note=document.getElementById('f-note').value.trim();
   if(!instrument||!user||!project||!startDate||!startTime||!endDate||!endTime){ alert('请填写所有必填项'); return; }
-  if(startDate>endDate||(startDate===endDate&&startTime>endTime)){ alert('结束时间须晚于开始时间'); return; }
+  if(startDate>endDate||(startDate===endDate&&startTime>=endTime)){ alert('结束时间须晚于开始时间'); return; }
   if(editId){
-    const {error:ue}=await _supabase.from('bookings').update({
+    await _supabase.from('bookings').update({
       instrument,user_name:user,project,start_date:startDate,
       start_time:startTime,end_date:endDate,end_time:endTime,
       note,color:selectedColor
     }).eq('booking_id',editId);
-    if(ue){ alert('更新失败：'+ue.message); return; }
   } else {
     const newId=Date.now().toString();
-    const {error:ie}=await _supabase.from('bookings').insert({
+    await _supabase.from('bookings').insert({
       booking_id:newId,instrument,user_name:user,project,
       start_date:startDate,start_time:startTime,
       end_date:endDate,end_time:endTime,note,color:selectedColor
     });
-    if(ie){ alert('保存失败：'+ie.message); return; }
   }
   closeModal();
   await loadBookings();
