@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>南通技术中心分析设备使用及安排</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f0f4f8;overflow:hidden;height:100vh}
+.topbar{background:#1a6b3c;color:white;padding:9px 18px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.topbar h1{font-size:14px}.topbar p{font-size:10px;color:#c8e6c9;margin-top:1px}
+.top-right{display:flex;align-items:center;gap:8px}
+.date-nav{display:flex;align-items:center;gap:5px}
+.date-nav button{background:rgba(255,255,255,.2);color:white;border:none;border-radius:4px;padding:4px 9px;cursor:pointer;font-size:11px}
+.date-nav button:hover{background:rgba(255,255,255,.35)}
+.today-btn{background:#f9a825!important;color:#333!important;font-weight:bold}
+#lbl{font-size:12px;font-weight:bold;min-width:160px;text-align:center}
+.view-btns{display:flex;gap:3px}
+.view-btn{background:rgba(255,255,255,.15);color:white;border:1px solid rgba(255,255,255,.3);border-radius:4px;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:bold}
+.view-btn.active{background:#f9a825;color:#333;border-color:#f9a825}
+.main{display:flex;height:calc(100vh - 46px)}
+.sidebar{width:255px;flex-shrink:0;background:#fff;border-right:1px solid #ddd;overflow-y:auto;padding:8px}
+.add-btn{display:block;width:100%;padding:8px;background:#1a6b3c;color:white;border:none;border-radius:6px;font-size:13px;font-weight:bold;cursor:pointer;margin-bottom:8px}
+.add-btn:hover{background:#145530}
+.sb-sec{margin-bottom:8px;border:1px solid #e0e0e0;border-radius:6px;overflow:hidden}
+.sb-sec-hdr{background:#e8f5e9;padding:6px 10px;font-size:11.5px;font-weight:bold;color:#1a6b3c;cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none}
+.sb-sec-hdr:hover{background:#d0ecd8}
+.sb-sec-body{padding:6px 8px}
+.stat-row{display:flex;gap:4px;margin-bottom:6px}
+.stat-card{flex:1;background:#f9fdfb;border:1px solid #e8f5e9;border-radius:5px;padding:4px;text-align:center}
+.stat-num{font-size:16px;font-weight:bold;color:#1a6b3c}.stat-lbl{font-size:9px;color:#888}
+.tree-node{margin-bottom:1px}
+.tree-parent{display:flex;align-items:center;gap:4px;padding:3px 5px;cursor:pointer;border-radius:4px;font-size:11px;font-weight:bold;color:#333;user-select:none}
+.tree-parent:hover{background:#f0f0f0}
+.tree-arrow{font-size:9px;color:#999;transition:transform .2s;flex-shrink:0}
+.tree-parent.open>.tree-arrow{transform:rotate(90deg)}
+.tree-children{padding-left:12px;display:none}
+.tree-parent.open+.tree-children{display:block}
+.tree-leaf{display:flex;align-items:center;gap:4px;padding:2px 5px;border-radius:3px;font-size:10.5px;color:#444}
+.tree-leaf:hover{background:#f5f5f5}
+.leaf-icon{font-size:11px;flex-shrink:0}.leaf-label{flex:1}
+.leaf-sub{font-size:9.5px;color:#888;max-width:68px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
+.proj-cat-wrap{margin-bottom:3px}
+.proj-cat-hdr{display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:#f0f7f2;border-radius:5px;cursor:pointer;font-size:11.5px;font-weight:bold;color:#1a6b3c;user-select:none;border:1px solid #c8e6c9}
+.proj-cat-hdr:hover{background:#d0ecd8}
+.proj-cat-body{display:none;padding:4px 2px 2px 4px}
+.proj-item{display:flex;align-items:center;padding:3px 6px;border-radius:4px;font-size:11px;color:#333;gap:4px}
+.proj-item:hover{background:#e8f5e9}
+.proj-item-name{flex:1}
+.proj-item-owner{font-size:9.5px;color:#e65100;background:#fff3e0;border-radius:3px;padding:1px 5px;white-space:nowrap;display:none}
+.proj-item:hover .proj-item-owner{display:block}
+.proj-del-btn{background:#ffebee;color:#c62828;border:none;border-radius:3px;cursor:pointer;font-size:11px;font-weight:bold;padding:1px 6px;flex-shrink:0}
+.proj-del-btn:hover{background:#ffcdd2}
+.proj-subitem{padding:2px 6px 2px 16px;font-size:10px;color:#666;border-radius:3px}
+.proj-subitem:hover{background:#f0f0f0}
+.proj-subitem::before{content:"– ";color:#bbb}
+.proj-add-row{display:flex;gap:4px;margin-top:5px;padding:0 2px}
+.proj-add-row input{flex:1;font-size:10.5px;padding:4px 6px;border:1px solid #ccc;border-radius:4px;min-width:0}
+.proj-add-btn{font-size:11px;padding:4px 8px;background:#1a6b3c;color:white;border:none;border-radius:4px;cursor:pointer;white-space:nowrap}
+.proj-add-btn:hover{background:#145530}
+.today-item{background:#f5f5f5;border-left:3px solid #1a6b3c;border-radius:0 4px 4px 0;padding:3px 6px;margin-bottom:3px;font-size:10px;cursor:pointer;line-height:1.5}
+.today-item:hover{background:#e8f5e9}
+.ti-inst{font-weight:bold;color:#1a6b3c;font-size:10.5px}
+.gantt-wrap{flex:1;overflow:auto;background:#fafafa}
+.gantt-header{display:flex;position:sticky;top:0;z-index:50;border-bottom:2px solid #1a6b3c;background:#fff}
+.gantt-corner{width:120px;flex-shrink:0;background:#1a6b3c;color:white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;position:sticky;left:0;z-index:60;padding:6px 4px}
+.time-headers{flex:1;display:flex}
+.time-hdr{flex:1;text-align:center;font-size:10px;color:#555;font-weight:bold;padding:6px 1px;border-left:1px solid #ddd;background:#f9fdfb;min-width:28px}
+.group-row{display:flex;background:#e8f5e9;border-bottom:1px solid #b2dfdb;cursor:pointer}
+.group-row:hover{background:#d0ecd8}
+.group-toggle-label{width:120px;flex-shrink:0;font-size:11px;font-weight:bold;color:#1a6b3c;padding:5px 8px;display:flex;align-items:center;gap:4px;position:sticky;left:0;background:inherit;z-index:40;border-right:1px solid #b2dfdb}
+.group-toggle-arrow{font-size:9px;transition:transform .2s}
+.group-row.open .group-toggle-arrow{transform:rotate(90deg)}
+.gantt-row{display:flex;border-bottom:1px solid #eee;min-height:36px}
+.gantt-row:hover{background:#fafffe}
+.inst-label{width:120px;flex-shrink:0;font-size:11px;color:#333;font-weight:bold;padding:0 7px;display:flex;align-items:center;background:#fff;position:sticky;left:0;z-index:30;border-right:1px solid #e0e0e0}
+.gantt-cells{flex:1;display:flex;position:relative;min-height:36px}
+.time-cell{flex:1;border-left:1px solid #f0f0f0;min-width:28px;cursor:pointer;min-height:36px;transition:background .1s}
+.time-cell:hover{background:#e8f5e9!important}
+.time-cell.major{border-left:1px solid #ddd}
+.bk-block{position:absolute;top:3px;bottom:3px;border-radius:4px;display:flex;align-items:center;padding:0 6px;font-size:10px;color:white;font-weight:bold;cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;box-shadow:0 1px 3px rgba(0,0,0,.2);z-index:10}
+.bk-block:hover{opacity:.85}
+.cal-grid{display:grid;border-left:1px solid #ddd;border-top:1px solid #ddd}
+.cal-day-hdr{background:#1a6b3c;color:white;text-align:center;font-size:11px;padding:5px;border-right:1px solid rgba(255,255,255,.2);border-bottom:1px solid #ddd}
+.cal-cell{border-right:1px solid #ddd;border-bottom:1px solid #ddd;min-height:70px;padding:3px;background:white;cursor:pointer}
+.cal-cell:hover{background:#f0fdf4}
+.cal-cell.other-month{background:#f9f9f9}
+.cal-cell.today-cell{background:#e8f5e9;border:2px solid #1a6b3c}
+.cal-date-num{font-size:11px;color:#555;margin-bottom:2px;font-weight:bold}
+.cal-cell.today-cell .cal-date-num{color:#1a6b3c}
+.cal-bk{font-size:9.5px;color:white;border-radius:3px;padding:1px 4px;margin-bottom:1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer}
+.cal-more{font-size:9px;color:#888;cursor:pointer}
+.now-line{position:absolute;top:0;bottom:0;width:2px;background:#c62828;z-index:20;pointer-events:none}
+.now-line::before{content:"";position:absolute;top:-1px;left:-4px;width:10px;height:10px;border-radius:50%;background:#c62828}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:400;justify-content:center;align-items:center}
+.modal-overlay.show{display:flex}
+.modal{background:white;border-radius:12px;padding:20px;width:460px;max-width:96%;box-shadow:0 8px 32px rgba(0,0,0,.25);max-height:92vh;overflow-y:auto}
+.modal h3{color:#1a6b3c;margin-bottom:12px;font-size:14px}
+.mf{margin-bottom:10px}
+.mf label{display:block;font-size:11px;color:#555;margin-bottom:3px;font-weight:bold}
+.mf select,.mf input,.mf textarea{width:100%;padding:6px 9px;border:1px solid #ccc;border-radius:5px;font-size:12px;font-family:Arial,sans-serif}
+.mf textarea{height:50px;resize:vertical}
+.modal-btns{display:flex;gap:7px;margin-top:14px}
+.modal-btns button{flex:1;padding:8px;border:none;border-radius:5px;font-size:12px;font-weight:bold;cursor:pointer}
+.btn-save{background:#1a6b3c;color:white}.btn-save:hover{background:#145530}
+.btn-del{background:#ffebee;color:#c62828}.btn-del:hover{background:#ffcdd2}
+.btn-cancel{background:#f5f5f5;color:#555}.btn-cancel:hover{background:#eee}
+.color-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;align-items:flex-start}
+.color-swatch{width:28px;height:28px;border-radius:5px;cursor:pointer;border:3px solid transparent;transition:border-color .15s,transform .15s}
+.color-swatch.selected{border-color:#222;transform:scale(1.15)}</style>
+</head>
+<body>
+<div class="topbar">
+  <div><h1>南通技术中心分析设备使用及安排</h1><p>Nantong Technology Center — Analytical Instrument Scheduler</p></div>
+  <div class="top-right">
+    <div class="view-btns">
+      <button class="view-btn" id="vb-day" onclick="setView('day')">日</button>
+      <button class="view-btn active" id="vb-week" onclick="setView('week')">周</button>
+      <button class="view-btn" id="vb-month" onclick="setView('month')">月</button>
+    </div>
+    <div class="date-nav">
+      <button onclick="navPrev()">◀</button>
+      <button class="today-btn" onclick="goToday()">今天</button>
+      <span id="lbl"></span>
+      <button onclick="navNext()">▶</button>
+    </div>
+  </div>
+</div>
+<div class="main">
+  <div class="sidebar">
+    <button class="add-btn" onclick="openAddModal()">＋ 新增预约</button>
+    <div class="sb-sec">
+      <div class="sb-sec-hdr" onclick="toggleSec(this)">今日统计 <span>▼</span></div>
+      <div class="sb-sec-body">
+        <div class="stat-row">
+          <div class="stat-card"><div class="stat-num" id="s-total">0</div><div class="stat-lbl">预约数</div></div>
+          <div class="stat-card"><div class="stat-num" id="s-inst">0</div><div class="stat-lbl">占用仪器</div></div>
+          <div class="stat-card"><div class="stat-num" id="s-user">0</div><div class="stat-lbl">使用人数</div></div>
+        </div>
+        <div class="tree-node">
+          <div class="tree-parent" onclick="toggleTree(this)"><i class="tree-arrow">▶</i> 🔬 仪器列表</div>
+          <div class="tree-children" id="inst-tree"></div>
+        </div>
+        <div class="tree-node" style="margin-top:3px">
+          <div class="tree-parent" onclick="toggleTree(this)"><i class="tree-arrow">▶</i> 👤 人员列表</div>
+          <div class="tree-children" id="user-tree"></div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-sec">
+      <div class="sb-sec-hdr" onclick="toggleSec(this)">项目管理 <span>▼</span></div>
+      <div class="sb-sec-body" id="proj-panel"></div>
+    </div>
+    <div class="sb-sec">
+      <div class="sb-sec-hdr" onclick="toggleSec(this)">今日安排 <span>▼</span></div>
+      <div class="sb-sec-body" id="today-list"></div>
+    </div>
+  </div>
+  <div class="gantt-wrap"><div id="gc"></div></div>
+</div>
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3 id="modal-title">新增预约</h3>
+    <div class="mf"><label>仪器</label><select id="f-inst"></select></div>
+    <div class="mf"><label>分析人员</label><select id="f-user"></select></div>
+    <div class="mf"><label>项目</label><select id="f-proj"></select></div>
+    <div class="mf" style="display:flex;gap:8px">
+      <div style="flex:1"><label>开始日期</label><input type="date" id="f-sdate"></div>
+      <div style="flex:1"><label>开始时间</label><input type="time" id="f-stime" value="08:00"></div>
+    </div>
+    <div class="mf" style="display:flex;gap:8px">
+      <div style="flex:1"><label>结束日期</label><input type="date" id="f-edate"></div>
+      <div style="flex:1"><label>结束时间</label><input type="time" id="f-etime" value="10:00"></div>
+    </div>
+    <div class="mf">
+      <label>颜色 / 可调性</label>
+      <div class="color-row" id="color-row"></div>
+    </div>
+    <div class="mf"><label>备注</label><textarea id="f-note" placeholder="样品数量等（可选）"></textarea></div>
+    <div class="modal-btns">
+      <button class="btn-save" onclick="saveBooking()">保 存</button>
+      <button class="btn-del" id="btn-del" onclick="deleteBooking()" style="display:none">删 除</button>
+      <button class="btn-cancel" onclick="closeModal()">取 消</button>
+    </div>
+  </div>
+</div>
+<script>
+
+const INSTRUMENTS=[
+  ...[1,2,3,4,5,6,7,8,9,10].map(n=>({id:'CDS-GC'+n,type:'GC'})),
+  {id:'CDS-GCMS1',type:'GCMS'},{id:'CDS-GCMS2',type:'GCMS'},
+  ...[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18].map(n=>({id:'CDS-LC'+n,type:'LC'}))
+];
+const INST_GROUPS=[
+  {label:'气相色谱 GC',  type:'GC',  icon:'🟢',color:'#1a6b3c'},
+  {label:'气质联用 GCMS',type:'GCMS',icon:'🔵',color:'#1565c0'},
+  {label:'液相色谱 LC',  type:'LC',  icon:'🟣',color:'#6a1b9a'}
+];
+const TYPE_COLOR={GC:'#1a6b3c',GCMS:'#1565c0',LC:'#6a1b9a'};
+const TEAMS=[{"name": "Analytical Innovation & Expertise", "short": "AIE", "members": ["王江林", "高灿", "杭栋", "姜圻", "彭益"]}, {"name": "Weeds Control Analytical Support", "short": "WCAS", "members": ["张金叶", "冯玉婷", "林建冬", "薛静丽", "朱小桥"]}, {"name": "ISO 组", "short": "ISO", "members": ["周晓冬", "耿娟", "管喻玺", "胡秋芳", "徐丹婷"]}, {"name": "其他", "short": "其他", "members": ["贾亚红"]}];
+const ALL_USERS=["冯玉婷", "高灿", "耿娟", "管喻玺", "杭栋", "胡秋芳", "姜圻", "贾亚红", "林建冬", "彭益", "王江林", "薛静丽", "徐丹婷", "张金叶", "朱小桥", "周晓冬"];
+const SOURCING_DATA={"氯虫苯甲酰胺": {"en": "Chloraniliprole （CTPR）", "projects": ["Appearance", "content", "BP1", "BP2", "BP3", "Solvent1", "Solvent2", "water", "Closure"]}, "苯醚甲环唑": {"en": "Difenoconazole (DFZ)", "projects": ["Appearance", "content", "Proportion of isomer", "BP1", "BP2", "Closure"]}, "丙环唑": {"en": "Propiconazole (PPZ)", "projects": ["Appearance", "content", "Proportion of isomer", "BP1", "Closure"]}, "氟唑菌酰羟胺": {"en": "Adepidyn (APN)", "projects": ["content", "BP1", "Solvent", "water"]}, "吡唑萘菌胺": {"en": "Isopyrazam (IZM)", "projects": ["content", "BP1", "BP2", "溶剂", "水分"]}, "戊菌唑原药": {"en": "Penconazole", "projects": ["BP1", "溶剂"]}, "精-异丙草胺": {"en": "S-Metolachlor (SMOC)", "projects": ["content", "BP1", "BP2", "water"]}, "噻菌灵": {"en": "Thiabendazole (TBZ)", "projects": ["content", "BP1"]}, "3-甲苯-4-硝基亚胺-1，3，5-噁二嗪": {"en": "methyl-nitro-oxadiaxinamine (OXA)", "projects": ["Content", "BP", "water", "Solvent"]}, "醚苯磺隆": {"en": "Triasulfuron (TSU)", "projects": ["Appearance", "Content", "BP", "Solvent", "water", "RI"]}, "氟磺隆": {"en": "Prosulfuron (PSU)", "projects": ["Appearance", "Content", "BP", "Solvent", "water", "HCl", "RI"]}, "噻虫嗪": {"en": "Thiamethoxam (TMX)", "projects": ["Appearance", "Content", "BP", "Solvent", "Sulphated Ash", "Loss on Drying", "pH Value"]}, "唑啉草酯": {"en": "Pinoxaden (PXD)", "projects": ["Appearance", "Content", "BP", "Solvent", "Water", "Sodium Ion"]}, "丁醚脲": {"en": "DFN", "projects": ["content", "BP1"]}, "2,2'联吡啶": {"en": "2,2'-Bipyridyl", "projects": ["content", "BP1", "water"]}, "2-甲基-6-乙基苯胺": {"en": "2-Methyl-6-Ethylaniline (MEA)", "projects": ["content", "BP1", "water"]}, "邻硝基苯酚": {"en": "ONP", "projects": ["content", "BP1", "Xylene Insolubles", "Iron ion", "water"]}, "解草啶": {"en": "Fenclorim", "projects": ["content", "BP1", "Solvent", "water", "Sodium chloride", "Colour"]}, "3-苯氧基苯甲醛": {"en": "3-Phenoxy benzaldehyde(3-PBA)", "projects": ["content", "BP3", "BP4", "BP5", "BP6", "BP7", "BP8", "BP9", "BP10", "BP11", "BP12", "BP13", "BP14", "BP15", "BP16", "BP17", "BP18"]}, "4-苯氧基苯甲醛": {"en": "3-Phenoxy benzaldehyde(3-PBA)", "projects": ["BP1"]}, "2-苯氧基苯甲醛": {"en": "3-Phenoxy benzaldehyde(3-PBA)", "projects": ["BP2"]}, "炔草酯": {"en": "clodinafop-propargyl (CDF)", "projects": ["content", "BP1", "BP2", "BP3", "BP4", "BP5", "BP6", "BP7", "BP8", "BP9", "BP10", "BP11", "BP12"]}, "2,3,5,6-四氟对苯二甲醇": {"en": "(2,3,5,6-tetrafluoro-1,4-phenylene)dimethanol(TFX-DIOL)", "projects": ["content", "BP1", "BP2", "BP3"]}, "三环唑": {"en": "Tricyclazole (TCZ)", "projects": ["content", "BP1", "BP2", "BP3", "BP4"]}, "40%敌草快母药": {"en": "40% Diquat", "projects": ["Appearance", "Content", "BP1", "Anion", "Cation", "BP2", "water", "pH Value"]}, "阿维菌素": {"en": "Abamectin (Aba)", "projects": ["Content", "BP", "Solvent", "Water", "analytical closure"]}, "甲氨基阿维菌素苯甲酸盐": {"en": "Emamectin (EMA)", "projects": ["Content", "BP1", "BP2", "Solvent", "Water", "analytical closure"]}, "解毒喹": {"en": "Cloquintocet-methyl (CQC）", "projects": ["Content", "BP1", "BP2", "Water", "Distillation residue", "Sodium", "Potassium"]}, "2,4,6-三氯苯胺": {"en": "2,4,6-Trichloroaniline (TCAN)", "projects": ["Content", "BP1", "BP2", "Water", "Iron"]}, "EMA Intermediate": {"en": "EMA Intermediate", "projects": ["Content", "BP1", "BP2", "Free amine"]}, "EMA New Process Intermediate": {"en": "EMA New Process Intermediate", "projects": ["Content", "Free amine"]}, "苄嘧磺隆（Bensulfuron-methyl）": {"en": "Bensulfuron (BSU)", "projects": ["content", "Appearance", "Solvent", "BP2", "BP1", "water"]}, "吡嘧磺隆 10%WP（Pyrazosulfuron-ethyl 10%WP）": {"en": "Pyrazosulfuron-ethyl 10% WP", "projects": ["content", "suspensibility", "water", "pH", "wet time", "seive"]}, "30%甲氧胺盐盐酸水溶液": {"en": "30%MAH", "projects": ["content", "BP1", "BP2", "Free Acid", "PH (30%)"]}, "百菌清": {"en": "Chlorothalonil (CTN)", "projects": ["content", "BP", "Xylene Insoluble", "Paticle size", "PH", "Moisture"]}, "二氯乙酰氯": {"en": "Dichloroacetyl chloride", "projects": ["content", "BP"]}, "虱螨脲": {"en": "Lufenuron", "projects": ["content", "BP"]}, "咯菌腈": {"en": "Fludioxonil (FDL)", "projects": ["content", "BP1", "BP2", "Solvent", "water"]}, "高效氯氟氰菊酯": {"en": "Lambda-cyhalothrin", "projects": ["content", "BP1", "BP2", "BP3", "Solvent", "water", "Hexane insoluble compounds"]}, "甲氧哌啶乙酯": {"en": "Spiropidion (SPID)", "projects": ["content", "BP", "Solvent", "water", "acetone insoluble", "potassium chloride", "pH值"]}, "扑草净": {"en": "Prometryn", "projects": ["AI", "BP1", "BP2"]}, "原甲酸三甲酯": {"en": "TMOF", "projects": ["AI", "BP1"]}, "甲基嘧啶磷": {"en": "Pirimiphos-methyl (PMM)", "projects": ["AI", "BP1", "BP2"]}};
+const PROJ_CATS=[
+  {key:'Sourcing',       label:'Sourcing',          isTree:true},
+  {key:'ProcessSupport', label:'Process Supporting', isTree:false},
+  {key:'Registration',   label:'Registration',       isTree:false},
+  {key:'PLCM',           label:'PLCM',               isTree:false},
+  {key:'PTESupport',     label:'PTE Support',         isTree:false},
+  {key:'ISO17025',       label:'ISO 17025',           isTree:false}
+];
+
+// 5种颜色：红=不可调，橙=较难调，黄=可协商，浅绿=弹性大，绿=随时可调
+const COLORS=[
+  {hex:'#c62828',label:'不可调整'},
+  {hex:'#e65100',label:'较难调整'},
+  {hex:'#f9a825',label:'可以协商'},
+  {hex:'#558b2f',label:'弹性较大'},
+  {hex:'#1a6b3c',label:'随时可调'}
+];
+
+const START_H=8,END_H=20,SLOTS=(END_H-START_H)*2;
+let bookings   = JSON.parse(localStorage.getItem('nt_b9')||'[]');
+let customProj = JSON.parse(localStorage.getItem('nt_cp9')||'{}');
+// customProj[catKey] = [{name,owner,customSubs:[]}]  (for Sourcing tree items too)
+let groupOpen  = JSON.parse(localStorage.getItem('nt_go9')||'{"GC":true,"GCMS":true,"LC":true}');
+let currentDate= new Date(); currentDate.setHours(0,0,0,0);
+let currentView='week', editId=null, selectedColor=COLORS[0].hex;
+
+const pad = n => String(n).padStart(2,'0');
+const dateKey = d => d.toISOString().slice(0,10);
+const todayKey = () => dateKey(new Date());
+const addDays = (d,n) => { const r=new Date(d); r.setDate(r.getDate()+n); return r; };
+function weekStart(d){ const wd=d.getDay(), diff=wd===0?-6:1-wd; const s=new Date(d); s.setDate(d.getDate()+diff); return s; }
+function fmtDate(d){ const D=['日','一','二','三','四','五','六']; return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日（周'+D[d.getDay()]+'）'; }
+function fmtWeek(d){ const s=weekStart(d),e=addDays(s,6); return (s.getMonth()+1)+'月'+s.getDate()+'日 – '+(e.getMonth()+1)+'月'+e.getDate()+'日'; }
+function fmtMonth(d){ return d.getFullYear()+'年'+(d.getMonth()+1)+'月'; }
+function updateLabel(){
+  const l=document.getElementById('lbl');
+  l.textContent=currentView==='day'?fmtDate(currentDate):currentView==='week'?fmtWeek(currentDate):fmtMonth(currentDate);
+}
+function setView(v){
+  currentView=v;
+  ['day','week','month'].forEach(x=>document.getElementById('vb-'+x).classList.toggle('active',x===v));
+  render();
+}
+function goToday(){ currentDate=new Date(); currentDate.setHours(0,0,0,0); render(); }
+function navPrev(){
+  if(currentView==='day') currentDate=addDays(currentDate,-1);
+  else if(currentView==='week') currentDate=addDays(currentDate,-7);
+  else currentDate.setMonth(currentDate.getMonth()-1);
+  render();
+}
+function navNext(){
+  if(currentView==='day') currentDate=addDays(currentDate,1);
+  else if(currentView==='week') currentDate=addDays(currentDate,7);
+  else currentDate.setMonth(currentDate.getMonth()+1);
+  render();
+}
+function timeToSlot(t){ const[h,m]=t.split(':').map(Number); return(h*60+m-START_H*60)/30; }
+function slotToTime(s){ const m=START_H*60+s*30; return pad(Math.floor(m/60))+':'+pad(m%60); }
+function save(){ localStorage.setItem('nt_b9',JSON.stringify(bookings)); }
+function saveProj(){ localStorage.setItem('nt_cp9',JSON.stringify(customProj)); }
+
+function render(){
+  updateLabel();
+  if(currentView==='day') renderDay();
+  else if(currentView==='week') renderWeek();
+  else renderMonth();
+  renderSidebar();
+  renderProjPanel();
+}
+
+/* ═══════════ 日视图 ═══════════ */
+function renderDay(){
+  const key=dateKey(currentDate);
+  const todayB=bookings.filter(b=>b.startDate<=key&&b.endDate>=key);
+  const gc=document.getElementById('gc'); gc.innerHTML='';
+
+  // 时间表头
+  const hdr=mk('div','gantt-header');
+  const corner=mk('div','gantt-corner'); corner.textContent='仪器/时间'; hdr.appendChild(corner);
+  const ths=mk('div','time-headers');
+  for(let h=START_H;h<END_H;h++){ const th=mk('div','time-hdr'); th.style.flex='2'; th.textContent=pad(h)+':00'; ths.appendChild(th); }
+  hdr.appendChild(ths); gc.appendChild(hdr);
+
+  INST_GROUPS.forEach(function(g){
+    const insts=INSTRUMENTS.filter(i=>i.type===g.type);
+    const isOpen=groupOpen[g.type]!==false;
+    // 组行
+    const gr=mk('div','group-row'+(isOpen?' open':''));
+    const gl=mk('div','group-toggle-label');
+    const ga=mk('span','group-toggle-arrow'); ga.textContent='▶';
+    gl.appendChild(ga); gl.appendChild(txt(' '+g.icon+' '+g.label+' ('+insts.length+')'));
+    gr.appendChild(gl); gr.appendChild(mk('div'));
+    bindClick(gr, (function(type){ return function(){ groupOpen[type]=!groupOpen[type]; localStorage.setItem('nt_go9',JSON.stringify(groupOpen)); renderDay(); }; })(g.type));
+    gc.appendChild(gr);
+    if(!isOpen) return;
+    insts.forEach(function(inst){
+      const iB=todayB.filter(b=>b.instrument===inst.id);
+      const row=mk('div','gantt-row');
+      const lbl=mk('div','inst-label'); lbl.textContent=inst.id; row.appendChild(lbl);
+      const cells=mk('div','gantt-cells');
+      for(let s=0;s<SLOTS;s++){
+        const cell=mk('div','time-cell'+(s%2===0?' major':''));
+        bindClick(cell,(function(iid,slot){ return function(){ openAddModal(iid,dateKey(currentDate),slotToTime(slot),dateKey(currentDate),slotToTime(Math.min(slot+4,SLOTS))); }; })(inst.id,s));
+        cells.appendChild(cell);
+      }
+      iB.forEach(function(b){
+        const ss=Math.max(0,timeToSlot(b.startTime)), ee=Math.min(SLOTS,timeToSlot(b.endTime));
+        if(ee<=ss) return;
+        const blk=mk('div','bk-block');
+        blk.style.left=(ss/SLOTS*100)+'%'; blk.style.width=((ee-ss)/SLOTS*100)+'%';
+        blk.style.background=b.color||TYPE_COLOR[inst.type];
+        blk.textContent=b.user+' · '+b.project;
+        blk.title=b.user+' | '+b.project+' | '+b.startDate+' '+b.startTime+'–'+b.endTime+(b.note?' | '+b.note:'');
+        bindClick(blk,(function(bid){ return function(e){ e.stopPropagation(); openEditModal(bid); }; })(b.id));
+        cells.appendChild(blk);
+      });
+      row.appendChild(cells); gc.appendChild(row);
+    });
+  });
+  drawNowLine();
+}
+function drawNowLine(){
+  if(dateKey(currentDate)!==todayKey()) return;
+  const now=new Date(), nm=now.getHours()*60+now.getMinutes(), sm=START_H*60, tm=(END_H-START_H)*60;
+  if(nm<sm||nm>sm+tm) return;
+  const pct=(nm-sm)/tm*100;
+  document.getElementById('gc').querySelectorAll('.gantt-cells').forEach(function(c){
+    const ln=mk('div','now-line'); ln.style.left=pct+'%'; c.appendChild(ln);
+  });
+}
+
+/* ═══════════ 周视图 ═══════════ */
+function renderWeek(){
+  const ws=weekStart(currentDate);
+  const days=Array.from({length:7},function(_,i){ return addDays(ws,i); });
+  const DN=['一','二','三','四','五','六','日'];
+  const gc=document.getElementById('gc'); gc.innerHTML='';
+  const grid=mk('div','cal-grid'); grid.style.gridTemplateColumns='repeat(7,1fr)';
+  days.forEach(function(d,i){
+    const h=mk('div','cal-day-hdr');
+    if(dateKey(d)===todayKey()){ h.style.background='#f9a825'; h.style.color='#333'; }
+    h.innerHTML='周'+DN[i]+'<br><b style="font-size:14px">'+d.getDate()+'</b>';
+    grid.appendChild(h);
+  });
+  days.forEach(function(d){
+    const key=dateKey(d);
+    const dayB=bookings.filter(b=>b.startDate<=key&&b.endDate>=key);
+    const cell=mk('div','cal-cell'+(key===todayKey()?' today-cell':''));
+    bindClick(cell,(function(ds){ return function(){ openAddModal(null,ds,'08:00',ds,'10:00'); }; })(key));
+    dayB.slice(0,4).forEach(function(b){
+      const blk=mk('div','cal-bk');
+      blk.style.background=b.color||TYPE_COLOR[INSTRUMENTS.find(i=>i.id===b.instrument)&&INSTRUMENTS.find(i=>i.id===b.instrument).type]||'#888';
+      blk.textContent=b.instrument+' '+b.user; blk.title=b.instrument+' | '+b.user+' | '+b.project;
+      bindClick(blk,(function(bid){ return function(e){ e.stopPropagation(); openEditModal(bid); }; })(b.id));
+      cell.appendChild(blk);
+    });
+    if(dayB.length>4){ const m=mk('div','cal-more'); m.textContent='+'+(dayB.length-4)+' 更多'; cell.appendChild(m); }
+    grid.appendChild(cell);
+  });
+  gc.appendChild(grid);
+}
+
+/* ═══════════ 月视图 ═══════════ */
+function renderMonth(){
+  const yr=currentDate.getFullYear(), mo=currentDate.getMonth();
+  const first=new Date(yr,mo,1), last=new Date(yr,mo+1,0);
+  let swd=first.getDay(); if(swd===0) swd=7; swd--;
+  const cells=[];
+  for(let i=swd-1;i>=0;i--) cells.push(new Date(yr,mo,-i));
+  for(let d=1;d<=last.getDate();d++) cells.push(new Date(yr,mo,d));
+  while(cells.length%7!==0) cells.push(new Date(yr,mo+1,cells.length-last.getDate()-swd+1));
+  const DN=['一','二','三','四','五','六','日'];
+  const gc=document.getElementById('gc'); gc.innerHTML='';
+  const grid=mk('div','cal-grid'); grid.style.gridTemplateColumns='repeat(7,1fr)';
+  DN.forEach(function(d){ const h=mk('div','cal-day-hdr'); h.textContent=d; grid.appendChild(h); });
+  cells.forEach(function(d){
+    const key=dateKey(d);
+    const dayB=bookings.filter(b=>b.startDate<=key&&b.endDate>=key);
+    const cell=mk('div','cal-cell'+(d.getMonth()!==mo?' other-month':'')+(key===todayKey()?' today-cell':''));
+    cell.style.minHeight='90px';
+    const dn=mk('div','cal-date-num'); dn.textContent=d.getDate(); cell.appendChild(dn);
+    bindClick(cell,(function(ds){ return function(){ openAddModal(null,ds,'08:00',ds,'10:00'); }; })(key));
+    dayB.slice(0,3).forEach(function(b){
+      const inst=INSTRUMENTS.find(i=>i.id===b.instrument);
+      const blk=mk('div','cal-bk');
+      blk.style.background=b.color||TYPE_COLOR[inst&&inst.type]||'#888';
+      blk.textContent=b.instrument+' '+b.user;
+      bindClick(blk,(function(bid){ return function(e){ e.stopPropagation(); openEditModal(bid); }; })(b.id));
+      cell.appendChild(blk);
+    });
+    if(dayB.length>3){ const m=mk('div','cal-more'); m.textContent='+'+(dayB.length-3)+'项'; cell.appendChild(m); }
+    grid.appendChild(cell);
+  });
+  gc.appendChild(grid);
+}
+
+/* ═══════════ 侧边栏 ═══════════ */
+function renderSidebar(){
+  const key=todayKey();
+  const todayB=bookings.filter(b=>b.startDate<=key&&b.endDate>=key);
+  const busyI=new Set(todayB.map(b=>b.instrument));
+  const busyU=new Set(todayB.map(b=>b.user));
+  document.getElementById('s-total').textContent=todayB.length;
+  document.getElementById('s-inst').textContent=busyI.size;
+  document.getElementById('s-user').textContent=busyU.size;
+
+  // 仪器树
+  const iTree=document.getElementById('inst-tree'); iTree.innerHTML='';
+  INST_GROUPS.forEach(function(g){
+    const insts=INSTRUMENTS.filter(i=>i.type===g.type);
+    const bc=insts.filter(i=>busyI.has(i.id)).length;
+    const node=mk('div','tree-node');
+    const par=mk('div','tree-parent');
+    const arr=mk('i','tree-arrow'); arr.textContent='▶'; par.appendChild(arr);
+    par.appendChild(txt(' '+g.icon+' '+g.label));
+    if(bc>0){ const badge=mk('span'); badge.style.cssText='background:'+g.color+';color:white;border-radius:8px;font-size:9px;padding:1px 4px;margin-left:3px'; badge.textContent=bc; par.appendChild(badge); }
+    const ch=mk('div','tree-children');
+    bindClick(par,function(){ par.classList.toggle('open'); ch.style.display=par.classList.contains('open')?'block':'none'; });
+    insts.forEach(function(i){
+      const iB=todayB.filter(b=>b.instrument===i.id);
+      const leaf=mk('div','tree-leaf');
+      leaf.innerHTML='<span class="leaf-icon">'+(iB.length?'🔴':'⚪')+'</span><span class="leaf-label">'+i.id+'</span><span class="leaf-sub">'+(iB.length?[...new Set(iB.map(b=>b.user))].join(','):'空闲')+'</span>';
+      ch.appendChild(leaf);
+    });
+    node.appendChild(par); node.appendChild(ch); iTree.appendChild(node);
+  });
+
+  // 人员（拼音序扁平）
+  const uTree=document.getElementById('user-tree'); uTree.innerHTML='';
+  ALL_USERS.forEach(function(m){
+    const mB=todayB.filter(b=>b.user===m);
+    const leaf=mk('div','tree-leaf');
+    leaf.innerHTML='<span class="leaf-icon">'+(mB.length?'🟠':'⚪')+'</span><span class="leaf-label">'+m+'</span>'+(mB.length?'<span class="leaf-sub">'+mB.map(b=>b.instrument).join(',')+'</span>':'');
+    uTree.appendChild(leaf);
+  });
+
+  // 今日安排
+  const sorted=[...todayB].sort((a,b)=>a.startTime.localeCompare(b.startTime));
+  const listEl=document.getElementById('today-list'); listEl.innerHTML='';
+  if(!sorted.length){ const p=mk('div'); p.style.cssText='font-size:11px;color:#aaa;padding:3px'; p.textContent='暂无预约'; listEl.appendChild(p); return; }
+  sorted.forEach(function(b){
+    const item=mk('div','today-item');
+    item.innerHTML='<div class="ti-inst">'+b.instrument+'</div><div>'+b.startDate+' '+b.startTime+'–'+b.endTime+' '+b.user+'</div><div style="color:#888">'+b.project+'</div>';
+    bindClick(item,(function(bid){ return function(e){ openEditModal(bid); }; })(b.id));
+    listEl.appendChild(item);
+  });
+}
+
+/* ═══════════ 项目面板 ═══════════ */
+function renderProjPanel(){
+  var panel=document.getElementById('proj-panel');
+  panel.innerHTML='';
+  PROJ_CATS.forEach(function(cat){
+    panel.appendChild(buildCatBlock(cat));
+  });
+}
+
+function buildCatBlock(cat){
+  var custom=customProj[cat.key]||[];
+  var wrap=mk('div','proj-cat-wrap');
+
+  /* 标题行 */
+  var hdr=mk('div','proj-cat-hdr');
+  var titleSpan=mk('span'); titleSpan.style.flex='1';
+  var getTotal=function(){
+    return cat.isTree
+      ? Object.keys(SOURCING_DATA).length+(customProj[cat.key]||[]).length
+      : (customProj[cat.key]||[]).length;
+  };
+  titleSpan.textContent=cat.label+' ('+getTotal()+')';
+  var arrSpan=mk('span'); arrSpan.style.fontSize='9px'; arrSpan.textContent='▶';
+  hdr.appendChild(titleSpan);
+  hdr.appendChild(arrSpan);
+
+  /* body */
+  var body=mk('div','proj-cat-body');
+
+  /* 点击标题展开/收起 */
+  hdr.addEventListener('click', function(){
+    var open=body.style.display==='block';
+    body.style.display=open?'none':'block';
+    arrSpan.textContent=open?'▶':'▼';
+  });
+
+  /* Sourcing：内置化学品列表 */
+  if(cat.isTree){
+    Object.entries(SOURCING_DATA).forEach(function(entry){
+      var cn=entry[0], data=entry[1];
+      var cw=mk('div'); cw.style.marginBottom='2px';
+      var sh=mk('div','proj-cat-hdr');
+      sh.style.cssText='background:#f9fdfb;border:1px solid #e0e0e0;color:#333;font-weight:normal;font-size:10.5px';
+      var nw=mk('span'); nw.style.flex='1';
+      var cnb=mk('b'); cnb.textContent=cn; nw.appendChild(cnb);
+      var ens=mk('span'); ens.style.cssText='display:block;font-size:9.5px;color:#888';
+      ens.textContent=data.en; nw.appendChild(ens);
+      var sa=mk('span'); sa.style.fontSize='9px'; sa.textContent='▶';
+      sh.appendChild(nw); sh.appendChild(sa);
+      var sb=mk('div','proj-cat-body');
+      sh.addEventListener('click', function(){
+        var open=sb.style.display==='block';
+        sb.style.display=open?'none':'block';
+        sa.textContent=open?'▶':'▼';
+      });
+      data.projects.forEach(function(p){
+        var sd=mk('div','proj-subitem'); sd.textContent=p; sb.appendChild(sd);
+      });
+      cw.appendChild(sh); cw.appendChild(sb);
+      body.appendChild(cw);
+    });
+  }
+
+  /* 自定义项目（可删） */
+  custom.forEach(function(proj, ci){
+    body.appendChild(makeCustomRow(cat, ci, proj.name, proj.owner, body, titleSpan, getTotal));
+  });
+
+  /* 添加行（在 body 底部，与项目并列） */
+  var addRow=mk('div');
+  addRow.style.cssText='display:flex;align-items:center;gap:4px;padding:4px 6px;margin-top:2px;border-top:1px dashed #c8e6c9';
+  var addInp=mk('input');
+  addInp.placeholder=cat.isTree?'化学品名称':'项目名称';
+  addInp.style.cssText='flex:1;font-size:10.5px;padding:3px 6px;border:1px solid #ccc;border-radius:4px;min-width:0';
+  var ownerInp=mk('input');
+  ownerInp.placeholder='负责人';
+  ownerInp.style.cssText='width:60px;flex-shrink:0;font-size:10.5px;padding:3px 5px;border:1px solid #ccc;border-radius:4px';
+  var addBtn=mk('button','proj-add-btn');
+  addBtn.textContent='添加'; addBtn.style.cssText='font-size:10.5px;padding:3px 8px;background:#1a6b3c;color:white;border:none;border-radius:4px;cursor:pointer;white-space:nowrap;flex-shrink:0';
+
+  /* 添加按钮事件 — 直接读取同一作用域内的 addInp / ownerInp */
+  addBtn.addEventListener('click', function(){
+    var n=addInp.value.trim();
+    var o=ownerInp.value.trim();
+    if(!n){ alert('请输入名称'); addInp.focus(); return; }
+    if(!customProj[cat.key]) customProj[cat.key]=[];
+    var ci=customProj[cat.key].length;
+    if(cat.isTree) customProj[cat.key].push({name:n,owner:o,subs:[]});
+    else           customProj[cat.key].push({name:n,owner:o});
+    saveProj();
+    /* 清空输入框 */
+    addInp.value=''; ownerInp.value='';
+    /* 在添加行之前插入新项目行 */
+    var newRow=makeCustomRow(cat, ci, n, o, body, titleSpan, getTotal);
+    body.insertBefore(newRow, addRow);
+    /* 更新标题计数 */
+    titleSpan.textContent=cat.label+' ('+getTotal()+')';
+    buildModalSelects();
+  });
+  /* 回车也能添加 */
+  addInp.addEventListener('keydown', function(e){ if(e.key==='Enter') addBtn.click(); });
+  ownerInp.addEventListener('keydown', function(e){ if(e.key==='Enter') addBtn.click(); });
+
+  addRow.appendChild(addInp);
+  addRow.appendChild(ownerInp);
+  addRow.appendChild(addBtn);
+  body.appendChild(addRow);
+
+  wrap.appendChild(hdr);
+  wrap.appendChild(body);
+  return wrap;
+}
+
+/* 构建单个自定义项目行 — 按名称删除，不重建面板 */
+function makeCustomRow(cat, ci, name, owner, bodyEl, titleSpan, getTotal){
+  var item=mk('div','proj-item');
+  var nm=mk('span','proj-item-name'); nm.textContent=name;
+  var ow=mk('span','proj-item-owner'); ow.textContent=owner?'负责人: '+owner:'暂无负责人';
+  var db=mk('button','proj-del-btn'); db.textContent='✕';
+  db.addEventListener('click', function(e){
+    e.stopPropagation();
+    if(!confirm('确认删除「'+name+'」？\n此操作不可撤销。')) return;
+    /* 按名称过滤，不依赖 ci 索引 */
+    customProj[cat.key]=(customProj[cat.key]||[]).filter(function(p){ return p.name!==name; });
+    saveProj();
+    item.remove();
+    titleSpan.textContent=cat.label+' ('+getTotal()+')';
+    buildModalSelects();
+    /* 不调用 renderProjPanel()，面板保持展开 */
+  });
+  item.appendChild(nm); item.appendChild(ow); item.appendChild(db);
+  return item;
+}
+
+
+/* ═══════════ 模态框 ═══════════ */
+function buildModalSelects(){
+  // 仪器
+  const fi=document.getElementById('f-inst'); fi.innerHTML='';
+  INST_GROUPS.forEach(function(g){
+    const og=document.createElement('optgroup'); og.label=g.label;
+    INSTRUMENTS.filter(i=>i.type===g.type).forEach(function(i){ const o=mk('option'); o.value=i.id; o.textContent=i.id; og.appendChild(o); });
+    fi.appendChild(og);
+  });
+  // 人员（姓氏拼音序，无分组）
+  const fu=document.getElementById('f-user'); fu.innerHTML='';
+  ALL_USERS.forEach(function(m){ const o=mk('option'); o.value=m; o.textContent=m; fu.appendChild(o); });
+  // 项目
+  const fp=document.getElementById('f-proj'); fp.innerHTML='';
+  PROJ_CATS.forEach(function(cat){
+    const og=document.createElement('optgroup'); og.label=cat.label;
+    if(cat.isTree){
+      Object.keys(SOURCING_DATA).forEach(function(cn){ const o=mk('option'); o.value=cn; o.textContent=cn; og.appendChild(o); });
+      (customProj['Sourcing']||[]).forEach(function(p){ const o=mk('option'); o.value=p.name; o.textContent=p.name; og.appendChild(o); });
+    } else {
+      (customProj[cat.key]||[]).forEach(function(p){ const o=mk('option'); o.value=p.name; o.textContent=p.name; og.appendChild(o); });
+    }
+    fp.appendChild(og);
+  });
+  // 5色
+  const cr=document.getElementById('color-row'); cr.innerHTML='';
+  COLORS.forEach(function(c){
+    const sw=mk('div','color-swatch'+(c.hex===selectedColor?' selected':''));
+    sw.style.background=c.hex; sw.title=c.label;
+    const lbl=mk('div'); lbl.style.cssText='font-size:9px;color:#555;text-align:center;margin-top:2px;white-space:nowrap'; lbl.textContent=c.label;
+    const wrap=mk('div'); wrap.style.cssText='display:flex;flex-direction:column;align-items:center;cursor:pointer';
+    wrap.appendChild(sw); wrap.appendChild(lbl);
+    bindClick(wrap,(function(col){ return function(){
+      selectedColor=col;
+      document.querySelectorAll('.color-swatch').forEach(function(el){ el.classList.toggle('selected',el.style.background===col||rgbHex(el.style.background)===col); });
+    }; })(c.hex));
+    cr.appendChild(wrap);
+  });
+}
+function rgbHex(rgb){ const m=rgb.match(/\d+/g); return m?'#'+m.slice(0,3).map(x=>parseInt(x).toString(16).padStart(2,'0')).join(''):rgb; }
+
+function openAddModal(instId,sDate,sTime,eDate,eTime){
+  editId=null; selectedColor=COLORS[2].hex; buildModalSelects();
+  document.getElementById('modal-title').textContent='新增预约';
+  document.getElementById('btn-del').style.display='none';
+  const td=dateKey(currentDate);
+  document.getElementById('f-sdate').value=sDate||td;
+  document.getElementById('f-edate').value=eDate||td;
+  document.getElementById('f-stime').value=sTime||'08:00';
+  document.getElementById('f-etime').value=eTime||'10:00';
+  if(instId) document.getElementById('f-inst').value=instId;
+  document.getElementById('f-note').value='';
+  document.getElementById('modal').classList.add('show');
+}
+function openEditModal(id){
+  const b=bookings.find(x=>x.id===id); if(!b) return;
+  editId=id; selectedColor=b.color||COLORS[2].hex; buildModalSelects();
+  document.getElementById('modal-title').textContent='编辑预约';
+  document.getElementById('btn-del').style.display='block';
+  document.getElementById('f-inst').value=b.instrument;
+  document.getElementById('f-user').value=b.user;
+  document.getElementById('f-proj').value=b.project;
+  document.getElementById('f-sdate').value=b.startDate;
+  document.getElementById('f-edate').value=b.endDate;
+  document.getElementById('f-stime').value=b.startTime;
+  document.getElementById('f-etime').value=b.endTime;
+  document.getElementById('f-note').value=b.note||'';
+  document.getElementById('modal').classList.add('show');
+}
+function closeModal(){ document.getElementById('modal').classList.remove('show'); }
+function saveBooking(){
+  const instrument=document.getElementById('f-inst').value;
+  const user=document.getElementById('f-user').value;
+  const project=document.getElementById('f-proj').value;
+  const startDate=document.getElementById('f-sdate').value;
+  const startTime=document.getElementById('f-stime').value;
+  const endDate=document.getElementById('f-edate').value;
+  const endTime=document.getElementById('f-etime').value;
+  const note=document.getElementById('f-note').value.trim();
+  if(!instrument||!user||!project||!startDate||!startTime||!endDate||!endTime){ alert('请填写所有必填项'); return; }
+  if(startDate>endDate||(startDate===endDate&&startTime>=endTime)){ alert('结束时间须晚于开始时间'); return; }
+  if(editId){
+    const idx=bookings.findIndex(b=>b.id===editId);
+    if(idx>=0) bookings[idx]={...bookings[idx],instrument,user,project,startDate,startTime,endDate,endTime,note,color:selectedColor};
+  } else {
+    bookings.push({id:Date.now().toString(),instrument,user,project,startDate,startTime,endDate,endTime,note,color:selectedColor});
+  }
+  save(); closeModal(); render();
+}
+function deleteBooking(){
+  if(!editId||!confirm('确认删除此预约？')) return;
+  bookings=bookings.filter(b=>b.id!==editId);
+  save(); closeModal(); render();
+}
+function toggleSec(el){
+  const body=el.nextElementSibling;
+  const open=body.style.display!=='none';
+  body.style.display=open?'none':'block';
+  el.querySelector('span:last-child').textContent=open?'▶':'▼';
+}
+function toggleTree(el){ el.classList.toggle('open'); el.nextElementSibling.style.display=el.classList.contains('open')?'block':'none'; }
+
+// DOM helpers
+function mk(tag,cls){ const el=document.createElement(tag); if(cls) el.className=cls; return el; }
+function txt(s){ return document.createTextNode(s); }
+function bindClick(el,fn){ el.addEventListener('click',fn); }
+
+setView('week');
+setInterval(function(){
+  if(currentView==='day'){
+    document.getElementById('gc').querySelectorAll('.now-line').forEach(function(l){ l.remove(); });
+    drawNowLine();
+  }
+},60000);
+
+</script>
+</body>
+</html>
