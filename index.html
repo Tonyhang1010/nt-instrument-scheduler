@@ -232,7 +232,12 @@ let currentDate= new Date(); currentDate.setHours(0,0,0,0);
 let currentView='week', editId=null, selectedColor=COLORS[0].hex;
 
 const pad = n => String(n).padStart(2,'0');
-const dateKey = d => d.toISOString().slice(0,10);
+const dateKey = function(d){
+  var y=d.getFullYear();
+  var m=String(d.getMonth()+1).padStart(2,'0');
+  var day=String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+day;
+};
 const todayKey = () => dateKey(new Date());
 const addDays = (d,n) => { const r=new Date(d); r.setDate(r.getDate()+n); return r; };
 function weekStart(d){ const wd=d.getDay(), diff=wd===0?-6:1-wd; const s=new Date(d); s.setDate(d.getDate()+diff); return s; }
@@ -670,14 +675,14 @@ async function saveBooking(){
   if(!instrument||!user||!project||!startDate||!startTime||!endDate||!endTime){ alert('请填写所有必填项'); return; }
   if(startDate>endDate||(startDate===endDate&&startTime>=endTime)){ alert('结束时间须晚于开始时间'); return; }
   if(editId){
-    await _supabase.from('Bookings').update({
+    await _supabase.from('bookings').update({
       instrument,user_name:user,project,start_date:startDate,
       start_time:startTime,end_date:endDate,end_time:endTime,
       note,color:selectedColor
     }).eq('booking_id',editId);
   } else {
     const newId=Date.now().toString();
-    await _supabase.from('Bookings').insert({
+    await _supabase.from('bookings').insert({
       booking_id:newId,instrument,user_name:user,project,
       start_date:startDate,start_time:startTime,
       end_date:endDate,end_time:endTime,note,color:selectedColor
@@ -689,7 +694,7 @@ async function saveBooking(){
 }
 async function deleteBooking(){
   if(!editId||!confirm('确认删除此预约？')) return;
-  await _supabase.from('Bookings').delete().eq('booking_id',editId);
+  await _supabase.from('bookings').delete().eq('booking_id',editId);
   closeModal();
   await loadBookings();
   render();
@@ -708,7 +713,7 @@ function txt(s){ return document.createTextNode(s); }
 function bindClick(el,fn){ el.addEventListener('click',fn); }
 
 async function loadBookings(){
-  const {data,error}=await _supabase.from('Bookings').select('*');
+  const {data,error}=await _supabase.from('bookings').select('*');
   if(error){ console.error('加载预约失败',error); return; }
   bookings=(data||[]).map(function(r){
     return {
