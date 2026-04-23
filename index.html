@@ -170,7 +170,7 @@ const _supabase = supabase.createClient(_SUPA_URL, _SUPA_KEY);
     <div class="mf"><label>分析人员</label><select id="f-user"></select></div>
     <div class="mf"><label>项目</label><select id="f-proj"></select></div>
     <div class="mf" style="display:flex;gap:8px">
-      <div style="flex:1"><label>开始日期</label><input type="date" id="f-sdate"></div>
+      <div style="flex:1"><label>开始日期</label><input type="date" id="f-sdate" onchange="var ed=document.getElementById('f-edate');if(!ed.value||ed.value<this.value)ed.value=this.value;"></div>
       <div style="flex:1"><label>开始时间</label><input type="time" id="f-stime" value="08:00"></div>
     </div>
     <div class="mf" style="display:flex;gap:8px">
@@ -223,7 +223,7 @@ const COLORS=[
   {hex:'#1a6b3c',label:'随时可调'}
 ];
 
-const START_H=8,END_H=20,SLOTS=(END_H-START_H)*2;
+const START_MIN=510,END_MIN=1080,SLOTS=(END_MIN-START_MIN)/30;
 let bookings   = JSON.parse(localStorage.getItem('nt_b9')||'[]');
 let customProj = JSON.parse(localStorage.getItem('nt_cp9')||'{}');
 // customProj[catKey] = [{name,owner,customSubs:[]}]  (for Sourcing tree items too)
@@ -266,8 +266,8 @@ function navNext(){
   else currentDate.setMonth(currentDate.getMonth()+1);
   render();
 }
-function timeToSlot(t){ const[h,m]=t.split(':').map(Number); return(h*60+m-START_H*60)/30; }
-function slotToTime(s){ const m=START_H*60+s*30; return pad(Math.floor(m/60))+':'+pad(m%60); }
+function timeToSlot(t){const[h,m]=t.split(':').map(Number);return(h*60+m-START_MIN)/30;}
+function slotToTime(s){const m=START_MIN+s*30;return pad(Math.floor(m/60))+':'+pad(m%60);}
 function save(){ /* data persisted to Supabase directly */ }
 function saveProj(){ localStorage.setItem('nt_cp9',JSON.stringify(customProj)); }
 
@@ -316,7 +316,28 @@ function renderDay(){
         cells.appendChild(cell);
       }
       iB.forEach(function(b){
-        const ss=Math.max(0,timeToSlot(b.startTime)), ee=Math.min(SLOTS,timeToSlot(b.endTime));
+        // 跨日处理：根据当前显示日期决定起止时间
+        var isStartDay = b.startDate===key;
+        var isEndDay   = b.endDate===key;
+        var rawSS, rawEE;
+        if(isStartDay && isEndDay){
+          // 同一天：正常显示
+          rawSS = timeToSlot(b.startTime);
+          rawEE = timeToSlot(b.endTime);
+        } else if(isStartDay){
+          // 开始日：从开始时间显示到当天末尾
+          rawSS = timeToSlot(b.startTime);
+          rawEE = SLOTS;
+        } else if(isEndDay){
+          // 结束日：从当天开头显示到结束时间
+          rawSS = 0;
+          rawEE = timeToSlot(b.endTime);
+        } else {
+          // 中间日：全天显示
+          rawSS = 0;
+          rawEE = SLOTS;
+        }
+        const ss=Math.max(0,rawSS), ee=Math.min(SLOTS,rawEE);
         if(ee<=ss) return;
         const blk=mk('div','bk-block');
         blk.style.left=(ss/SLOTS*100)+'%'; blk.style.width=((ee-ss)/SLOTS*100)+'%';
@@ -638,10 +659,11 @@ function openAddModal(instId,sDate,sTime,eDate,eTime){
   editId=null; selectedColor=COLORS[2].hex; buildModalSelects();
   document.getElementById('modal-title').textContent='新增预约';
   document.getElementById('btn-del').style.display='none';
-  const td=dateKey(currentDate);
-  document.getElementById('f-sdate').value=sDate||td;
-  document.getElementById('f-edate').value=eDate||td;
-  document.getElementById('f-stime').value=sTime||'08:00';
+  const td=todayKey();
+  const sd=sDate||td;
+  document.getElementById('f-sdate').value=sd;
+  document.getElementById('f-edate').value=eDate||sd;
+  document.getElementById('f-stime').value=sTime||'08:30';
   document.getElementById('f-etime').value=eTime||'10:00';
   if(instId) document.getElementById('f-inst').value=instId;
   document.getElementById('f-note').value='';
@@ -673,20 +695,22 @@ async function saveBooking(){
   const endTime=document.getElementById('f-etime').value;
   const note=document.getElementById('f-note').value.trim();
   if(!instrument||!user||!project||!startDate||!startTime||!endDate||!endTime){ alert('请填写所有必填项'); return; }
-  if(startDate>endDate||(startDate===endDate&&startTime>=endTime)){ alert('结束时间须晚于开始时间'); return; }
+  if(startDate>endDate||(startDate===endDate&&startTime>endTime)){ alert('结束时间须晚于开始时间'); return; }
   if(editId){
-    await _supabase.from('bookings').update({
+    const {error:ue}=await _supabase.from('Bookings').update({
       instrument,user_name:user,project,start_date:startDate,
       start_time:startTime,end_date:endDate,end_time:endTime,
       note,color:selectedColor
     }).eq('booking_id',editId);
+    if(ue){ alert('更新失败：'+ue.message); return; }
   } else {
     const newId=Date.now().toString();
-    await _supabase.from('bookings').insert({
+    const {error:ie}=await _supabase.from('Bookings').insert({
       booking_id:newId,instrument,user_name:user,project,
       start_date:startDate,start_time:startTime,
       end_date:endDate,end_time:endTime,note,color:selectedColor
     });
+    if(ie){ alert('保存失败：'+ie.message); return; }
   }
   closeModal();
   await loadBookings();
@@ -694,7 +718,7 @@ async function saveBooking(){
 }
 async function deleteBooking(){
   if(!editId||!confirm('确认删除此预约？')) return;
-  await _supabase.from('bookings').delete().eq('booking_id',editId);
+  await _supabase.from('Bookings').delete().eq('booking_id',editId);
   closeModal();
   await loadBookings();
   render();
@@ -713,7 +737,7 @@ function txt(s){ return document.createTextNode(s); }
 function bindClick(el,fn){ el.addEventListener('click',fn); }
 
 async function loadBookings(){
-  const {data,error}=await _supabase.from('bookings').select('*');
+  const {data,error}=await _supabase.from('Bookings').select('*');
   if(error){ console.error('加载预约失败',error); return; }
   bookings=(data||[]).map(function(r){
     return {
