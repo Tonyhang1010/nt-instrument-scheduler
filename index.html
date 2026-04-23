@@ -119,8 +119,8 @@ const _supabase = supabase.createClient(_SUPA_URL, _SUPA_KEY);
   <div><h1>南通技术中心分析设备使用及安排</h1><p>Nantong Technology Center — Analytical Instrument Scheduler</p></div>
   <div class="top-right">
     <div class="view-btns">
-      <button class="view-btn" id="vb-day" onclick="setView('day')">日</button>
-      <button class="view-btn active" id="vb-week" onclick="setView('week')">周</button>
+      <button class="view-btn active" id="vb-day" onclick="setView('day')">日</button>
+      <button class="view-btn" id="vb-week" onclick="setView('week')">周</button>
       <button class="view-btn" id="vb-month" onclick="setView('month')">月</button>
     </div>
     <div class="date-nav">
@@ -290,7 +290,16 @@ function renderDay(){
   const hdr=mk('div','gantt-header');
   const corner=mk('div','gantt-corner'); corner.textContent='仪器/时间'; hdr.appendChild(corner);
   const ths=mk('div','time-headers');
-  for(let h=START_H;h<END_H;h++){ const th=mk('div','time-hdr'); th.style.flex='2'; th.textContent=pad(h)+':00'; ths.appendChild(th); }
+  for(let s=0;s<SLOTS;s++){
+    const minVal=START_MIN+s*30;
+    const hh=Math.floor(minVal/60), mm=minVal%60;
+    const th=mk('div','time-hdr');
+    // 整点显示大字，半点显示小字
+    if(mm===0){ th.style.fontWeight='bold'; th.style.fontSize='10px'; }
+    else { th.style.fontSize='9px'; th.style.color='#aaa'; }
+    th.textContent=pad(hh)+':'+pad(mm);
+    ths.appendChild(th);
+  }
   hdr.appendChild(ths); gc.appendChild(hdr);
 
   INST_GROUPS.forEach(function(g){
@@ -756,7 +765,7 @@ _supabase.channel('bookings-changes')
   .subscribe();
 
 loadBookings().then(function(){
-  setView('week');
+  setView('day');
 });
 
 setInterval(function(){
