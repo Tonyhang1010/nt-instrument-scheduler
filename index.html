@@ -223,7 +223,7 @@ const COLORS=[
   {hex:'#1a6b3c',label:'随时可调'}
 ];
 
-const START_MIN=510,END_MIN=1080,SLOTS=(END_MIN-START_MIN)/30;
+const START_MIN=540,END_MIN=1050,SLOTS=(END_MIN-START_MIN)/30;
 let bookings   = JSON.parse(localStorage.getItem('nt_b9')||'[]');
 let customProj = JSON.parse(localStorage.getItem('nt_cp9')||'{}');
 // customProj[catKey] = [{name,owner,customSubs:[]}]  (for Sourcing tree items too)
@@ -363,7 +363,7 @@ function renderDay(){
 }
 function drawNowLine(){
   if(dateKey(currentDate)!==todayKey()) return;
-  const now=new Date(), nm=now.getHours()*60+now.getMinutes(), sm=START_H*60, tm=(END_H-START_H)*60;
+  const now=new Date(), nm=now.getHours()*60+now.getMinutes(), sm=Math.floor(START_MIN/60)*60, tm=(Math.floor(END_MIN/60)-Math.floor(START_MIN/60))*60;
   if(nm<sm||nm>sm+tm) return;
   const pct=(nm-sm)/tm*100;
   document.getElementById('gc').querySelectorAll('.gantt-cells').forEach(function(c){
@@ -672,7 +672,7 @@ function openAddModal(instId,sDate,sTime,eDate,eTime){
   const sd=sDate||td;
   document.getElementById('f-sdate').value=sd;
   document.getElementById('f-edate').value=eDate||sd;
-  document.getElementById('f-stime').value=sTime||'08:30';
+  document.getElementById('f-stime').value=sTime||'09:00';
   document.getElementById('f-etime').value=eTime||'10:00';
   if(instId) document.getElementById('f-inst').value=instId;
   document.getElementById('f-note').value='';
@@ -706,7 +706,7 @@ async function saveBooking(){
   if(!instrument||!user||!project||!startDate||!startTime||!endDate||!endTime){ alert('请填写所有必填项'); return; }
   if(startDate>endDate||(startDate===endDate&&startTime>endTime)){ alert('结束时间须晚于开始时间'); return; }
   if(editId){
-    const {error:ue}=await _supabase.from('Bookings').update({
+    const {error:ue}=await _supabase.from('bookings').update({
       instrument,user_name:user,project,start_date:startDate,
       start_time:startTime,end_date:endDate,end_time:endTime,
       note,color:selectedColor
@@ -714,7 +714,7 @@ async function saveBooking(){
     if(ue){ alert('更新失败：'+ue.message); return; }
   } else {
     const newId=Date.now().toString();
-    const {error:ie}=await _supabase.from('Bookings').insert({
+    const {error:ie}=await _supabase.from('bookings').insert({
       booking_id:newId,instrument,user_name:user,project,
       start_date:startDate,start_time:startTime,
       end_date:endDate,end_time:endTime,note,color:selectedColor
@@ -727,7 +727,7 @@ async function saveBooking(){
 }
 async function deleteBooking(){
   if(!editId||!confirm('确认删除此预约？')) return;
-  await _supabase.from('Bookings').delete().eq('booking_id',editId);
+  await _supabase.from('bookings').delete().eq('booking_id',editId);
   closeModal();
   await loadBookings();
   render();
@@ -746,7 +746,7 @@ function txt(s){ return document.createTextNode(s); }
 function bindClick(el,fn){ el.addEventListener('click',fn); }
 
 async function loadBookings(){
-  const {data,error}=await _supabase.from('Bookings').select('*');
+  const {data,error}=await _supabase.from('bookings').select('*');
   if(error){ console.error('加载预约失败',error); return; }
   bookings=(data||[]).map(function(r){
     return {
